@@ -5,10 +5,10 @@
  * Description:          Receba pagamentos via Pix, Cartão de crédito e boleto
  * Author:               Fernando Acosta
  * Author URI:           https://fernandoacosta.net
- * Version:              1.0.3
+ * Version:              1.0.4
  * License:              GPLv2 or later
  * WC requires at least: 4.0.0
- * WC tested up to:      6.5.0
+ * WC tested up to:      6.8.2
  *
  * This plugin is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ class Click2pay_For_WooCommerce {
    *
    * @var float
    */
-  const VERSION = '1.0.3';
+  const VERSION = '1.0.4';
 
   /**
    * Instance of this class.

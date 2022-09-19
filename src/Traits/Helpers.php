@@ -22,6 +22,7 @@ trait Helpers {
   public function get_order_phone( $order ) {
     $cellphone = $order->get_meta( '_billing_cellphone' );
     $phone     = '' === $cellphone ? $order->get_billing_phone() : $cellphone;
+    $phone     = $this->only_numbers( $phone );
 
     return apply_filters( 'click2pay_for_woocommerce_customer_phone', $phone, $order );
   }

@@ -7,7 +7,7 @@ defined( 'ABSPATH' ) || exit;
 class Pix_API extends API {
   public function create_transaction( $order ) {
     $args = [
-      'id' => 'wc-' . $order->get_id(),
+      'id' => $this->gateway->prefix . $order->get_id(),
       'totalAmount' => $order->get_total(),
       'payerInfo' => [
         'name'        => $order->get_formatted_billing_full_name(),

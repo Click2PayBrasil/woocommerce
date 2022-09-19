@@ -43,6 +43,7 @@ class Pix extends WC_Payment_Gateway {
 		$this->description   = $this->get_option( 'description' );
 		$this->client_id     = $this->get_option( 'client_id' );
 		$this->client_secret = $this->get_option( 'client_secret' );
+    $this->prefix        = $this->get_option( 'prefix', 'wc-' );
 		$this->expires_in    = $this->get_option( 'expires_in' );
 		$this->debug         = $this->get_option( 'debug' );
     $this->sandbox       = $this->get_option( 'sandbox' );
@@ -134,6 +135,15 @@ class Pix extends WC_Payment_Gateway {
 				'type'              => 'text',
 				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-for-woocommerce' ),
 				'default'           => '',
+				'custom_attributes' => array(
+					'required' => 'required',
+				),
+			),
+			'prefix' => array(
+				'title'             => __( 'Prefixo do pedido', 'click2pay-for-woocommerce' ),
+				'type'              => 'text',
+				'description'       => __( 'Adicione um prefixo único ao ID do pedido enviado à Click2Pay.', 'click2pay-for-woocommerce' ),
+				'default'           => 'wc-',
 				'custom_attributes' => array(
 					'required' => 'required',
 				),

@@ -33,7 +33,7 @@ class Bank_Slip_API extends API {
     }
 
     $args = [
-      'id' => 'wc-' . $order->get_id(),
+      'id' => $this->gateway->prefix . $order->get_id(),
       'totalAmount' => $order->get_total(),
       'payerInfo' => [
         'name'        => $order->get_formatted_billing_full_name(),
