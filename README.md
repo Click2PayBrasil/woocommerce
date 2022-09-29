@@ -2,12 +2,12 @@
 
 Receba pagamentos via Pix, Cartão de crédito e boleto
 
-<img src="https://click2pay.com.br/site/views/_assets/images/logo-white.png" width="100" alt="Click2Pay Logo" />
+<img src="https://click2pay.com.br/site/views/_assets/images/logo-white.svg" width="100" alt="Click2Pay Logo" />
 
 - **Tags:** Pagamentos, Pix, Cartão de Crédito, Boleto, Click2pay
-- **Version:** 1.0.3
-- **WC requires at least:** 3.5.x
-- **WC tested up to:** 6.3.0
+- **Version:** 1.0.5
+- **WC requires at least:** 4.0.0
+- **WC tested up to:** 6.9.2
 - **License:** GNU General Public License v3.0
 
 A solução completa para você receber seus pagamentos online.
@@ -22,7 +22,7 @@ Este Plugin atualmente oferece:
 - Pagamento via cartão de crédito.
 
 ### Requisitos do sistema: ###
-* Versão do WooCommerce 3.5.x até 6.3.0
+* Versão do WooCommerce 4.0.0 até 6.9.2
 
 ##### Utilização do plugin Brazillian Market, para utilização de campos como CPF e/ou Data de Aniversário. 
     ⚠️ O CPF é obrigatório nas transações, já o campo de data de aniversário é obrigatório apenas para os clientes que utilizam 
