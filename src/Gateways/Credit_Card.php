@@ -282,7 +282,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 
       $card_hash  = isset( $_POST[ $this->id . '_hash'] ) ? wc_clean( $_POST[ $this->id . '_hash'] ) : '';
       $card_brand = isset( $_POST[ $this->id . '_brand'] ) ? wc_clean( $_POST[ $this->id . '_brand'] ) : '';
-      $installments = isset( $_POST[ $this->id . '_installments'] ) ? wc_clean( $_POST[ $this->id . '_installments'] ) : '';
+      $installments = isset( $_POST[ $this->id . '_installments'] ) ? wc_clean( $_POST[ $this->id . '_installments'] ) : '1';
 
       $card_token = isset( $_POST[ 'wc-' . $this->id . '-payment-token'] ) ? wc_clean( $_POST[ 'wc-' . $this->id . '-payment-token'] ) : '';
 
@@ -320,7 +320,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 
       $available_installments = $this->get_available_installments();
 
-      if ( ! isset( $available_installments[ $installments ] ) ) {
+      if ( 1 !== intval( $installments ) && ! isset( $available_installments[ $installments ] ) ) {
         throw new Exception( __( 'O número de parcelas é inválido. Por favor, selecione outra opção', 'click2pay-for-woocommerce' ) );
       }
 
@@ -521,7 +521,6 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 
     // get all installments options till the limit
     for ( $i = 1; $i <= $this->max_installment; $i++ ) {
-
       $fee = $this->free_installments >= $i ? 0 : floatval( $this->interest_rate );
 
       // Se o juros for zero, utilza uma só fórmula para tudo
