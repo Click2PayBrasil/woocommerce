@@ -66,7 +66,7 @@
         }
 
         if ( $.isEmptyObject( errors ) ) {
-          errors['generic'] = click2PayCreditCardParams.errors.card_number;
+          errors['generic'] = click2PayCreditCardParams.errors.generic;
         }
 
         // Display the errors in credit card form.

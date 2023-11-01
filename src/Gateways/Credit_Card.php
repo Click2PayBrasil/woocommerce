@@ -1,12 +1,13 @@
 <?php
 
-namespace Click2pay_For_WooCommerce\Gateways;
+namespace Click2pay_Payments\Gateways;
 
-use Click2pay_For_WooCommerce;
-use Click2pay_For_WooCommerce\API\Credit_Card_API;
-use Click2pay_For_WooCommerce\Credit_Card\WC_Payment_Token_CC_Click2pay;
-use Click2pay_For_WooCommerce\Traits\Helpers;
-use Click2pay_For_WooCommerce\Traits\Logger;
+use Click2pay_Payments;
+use Click2pay_Payments\API\Credit_Card_API;
+use Click2pay_Payments\Credit_Card\WC_Payment_Token_CC_Click2pay;
+use Click2pay_Payments\Traits\Helpers;
+use Click2pay_Payments\Traits\Logger;
+use Click2pay_Payments\Traits\Subscriptions;
 use Exception;
 use WC_Payment_Gateway_CC;
 use WC_Order_Item_Fee;
@@ -14,13 +15,13 @@ use WC_Order_Item_Fee;
 defined( 'ABSPATH' ) || exit;
 
 class Credit_Card extends WC_Payment_Gateway_CC {
-  use Logger, Helpers;
+  use Logger, Helpers, Subscriptions;
 
   public $supports = [
     'products',
     'refunds',
     'tokenization',
-    // 'add_payment_method',
+  // 'add_payment_method',
   ];
 
 
@@ -31,8 +32,8 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 		$this->id                   = 'click2pay-credit-card';
     $this->transaction_type     = 'CreditCard';
 		$this->has_fields           = true;
-		$this->method_title         = __( 'Click2pay - Cartão de crédito', 'click2pay-for-woocommerce' );
-		$this->method_description   = __( 'Receba pagamentos em até 12x via cartão de crédito.', 'click2pay-for-woocommerce' );
+		$this->method_title         = __( 'Click2pay - Cartão de crédito', 'click2pay-pagamentos' );
+		$this->method_description   = __( 'Receba pagamentos em até 12x via cartão de crédito.', 'click2pay-pagamentos' );
 		// $this->view_transaction_url = 'https://beta.dashboard.pagar.me/#/transactions/%s';
 
 		// Load the form fields.
@@ -56,7 +57,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 		$this->smallest_installment = $this->get_option( 'smallest_installment', 5 );
 		$this->interest_rate        = $this->get_option( 'interest_rate', '0' );
 		$this->free_installments    = $this->get_option( 'free_installments', '1' );
-		$this->fee_name             = __( 'Taxa do parcelmento com juros', 'click2pay-for-woocommerce' );
+		$this->fee_name             = __( 'Taxa do parcelmento com juros', 'click2pay-pagamentos' );
 
     $this->instructions  = '';
 
@@ -75,7 +76,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 
 		add_action( 'woocommerce_before_thankyou', array( $this, 'thankyou_page' ) );
 
-    add_action( 'woocommerce_api_' . $this->id, array( $this, 'ipn_handler' ) );
+    add_action( 'woocommerce_api_' . $this->id, array( $this, 'notification_handler' ) );
 
     add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ) );
 
@@ -91,7 +92,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 	 * @return bool
 	 */
 	public function is_available() {
-		return parent::is_available() && ! empty( $this->client_id ) && ! empty( $this->client_secret ) && ! empty( $this->public_key ) && $this->api->using_supported_currency();
+		return parent::is_available() && ! empty( $this->client_id ) && ! empty( $this->client_secret ) && ! empty( $this->public_key ) && $this->api->using_supported_currency() && ! is_add_payment_method_page();
 	}
 
 	/**
@@ -100,29 +101,29 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 	public function init_form_fields() {
 		$this->form_fields = array(
 			'enabled' => array(
-				'title'   => __( 'Ativar método', 'click2pay-for-woocommerce' ),
+				'title'   => __( 'Ativar método', 'click2pay-pagamentos' ),
 				'type'    => 'checkbox',
-				'label'   => __( 'Habilitar recebimentos via Cartão de crédito', 'click2pay-for-woocommerce' ),
+				'label'   => __( 'Habilitar recebimentos via Cartão de crédito', 'click2pay-pagamentos' ),
 				'default' => 'no',
 			),
 			'title' => array(
-				'title'       => __( 'Título', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Título', 'click2pay-pagamentos' ),
 				'type'        => 'text',
-				'description' => __( 'Isto mostra o título que o usuário vai ver no checkout.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'Isto mostra o título que o usuário vai ver no checkout.', 'click2pay-pagamentos' ),
 				'desc_tip'    => true,
-				'default'     => __( 'Cartão de Crédito - Click2pay', 'click2pay-for-woocommerce' ),
+				'default'     => __( 'Cartão de Crédito - Click2pay', 'click2pay-pagamentos' ),
 			),
 			'description' => array(
-        'title'       => __( 'Descrição', 'click2pay-for-woocommerce' ),
+        'title'       => __( 'Descrição', 'click2pay-pagamentos' ),
 				'type'        => 'textarea',
-				'description' => __( 'A descrição do pagamento que é exibida no checkout.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'A descrição do pagamento que é exibida no checkout.', 'click2pay-pagamentos' ),
 				'desc_tip'    => true,
-				'default'     => __( 'Pagamento via cartão de crédito', 'click2pay-for-woocommerce' ),
+				'default'     => __( 'Pagamento via cartão de crédito', 'click2pay-pagamentos' ),
 			),
       'soft_descriptor' => array(
-        'title'       => __( 'Descrição na fatura', 'click2pay-for-woocommerce' ),
+        'title'       => __( 'Descrição na fatura', 'click2pay-pagamentos' ),
         'type'        => 'text',
-        'description' => __( 'O nome da cobrança que aparecerá na fatura do cartão do cliente. Máximo de 50 caracteres.', 'click2pay-for-woocommerce' ),
+        'description' => __( 'O nome da cobrança que aparecerá na fatura do cartão do cliente. Máximo de 50 caracteres.', 'click2pay-pagamentos' ),
         'desc_tip'    => true,
 
         'default'     => esc_attr( get_bloginfo( 'name', 'display' ) ),
@@ -132,11 +133,11 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 				),
       ),
       'max_installment' => array(
-				'title'       => __( 'Número de parcelas', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Número de parcelas', 'click2pay-pagamentos' ),
 				'type'        => 'select',
 				'class'       => 'wc-enhanced-select',
 				'default'     => '12',
-				'description' => __( 'Número máximo de parcelas que é possível com pagamentos por cartão de crédito.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'Número máximo de parcelas que é possível com pagamentos por cartão de crédito.', 'click2pay-pagamentos' ),
 				'desc_tip'    => true,
 				'options'     => array(
 					'1'  => '1',
@@ -154,28 +155,28 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 				),
 			),
 			'smallest_installment' => array(
-				'title'       => __( 'Parcela mínima', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Parcela mínima', 'click2pay-pagamentos' ),
 				'type'        => 'text',
-				'description' => __( 'Informe o valor mínimo da parcela. Nota: não pode ser menor do que 5.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'Informe o valor mínimo da parcela. Nota: não pode ser menor do que 5.', 'click2pay-pagamentos' ),
 				'desc_tip'    => true,
 				'default'     => '5',
 			),
 			'interest_rate' => array(
-				'title'       => __( 'Taxa de juros', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Taxa de juros', 'click2pay-pagamentos' ),
 				'type'        => 'text',
-				'description' => __( 'Informe a taxa de juros. Nota: utilize 0 para não cobrar juros.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'Informe a taxa de juros. Nota: utilize 0 para não cobrar juros.', 'click2pay-pagamentos' ),
 				'desc_tip'    => true,
 				'default'     => '0',
 			),
 			'free_installments' => array(
-				'title'       => __( 'Parcelas sem juros', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Parcelas sem juros', 'click2pay-pagamentos' ),
 				'type'        => 'select',
 				'class'       => 'wc-enhanced-select',
 				'default'     => '1',
-				'description' => __( 'Número máximo de parcelas sem juros.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'Número máximo de parcelas sem juros.', 'click2pay-pagamentos' ),
 				'desc_tip'    => true,
 				'options'     => array(
-					'0'  => _x( 'Nenhuma', 'no free installments', 'click2pay-for-woocommerce' ),
+					'0'  => _x( 'Nenhuma', 'no free installments', 'click2pay-pagamentos' ),
 					'1'  => '1',
 					'2'  => '2',
 					'3'  => '3',
@@ -191,83 +192,82 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 				),
 			),
 			'integration' => array(
-        'title'       => __( 'Configurações de Integração', 'click2pay-for-woocommerce' ),
+        'title'       => __( 'Configurações de Integração', 'click2pay-pagamentos' ),
 				'type'        => 'title',
 				'description' => '',
 			),
 			'client_id' => array(
-				'title'             => __( 'Client ID', 'click2pay-for-woocommerce' ),
+				'title'             => __( 'Client ID', 'click2pay-pagamentos' ),
 				'type'              => 'text',
-				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-for-woocommerce' ),
+				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-pagamentos' ),
 				'default'           => '',
 				'custom_attributes' => array(
 					'required' => 'required',
 				),
 			),
 			'client_secret' => array(
-				'title'             => __( 'Client Secret', 'click2pay-for-woocommerce' ),
+				'title'             => __( 'Client Secret', 'click2pay-pagamentos' ),
 				'type'              => 'text',
-				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-for-woocommerce' ),
+				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-pagamentos' ),
 				'default'           => '',
 				'custom_attributes' => array(
 					'required' => 'required',
 				),
 			),
 			'public_key' => array(
-				'title'             => __( 'Chave Pública', 'click2pay-for-woocommerce' ),
+				'title'             => __( 'Chave Pública', 'click2pay-pagamentos' ),
 				'type'              => 'text',
-				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-for-woocommerce' ),
+				'description'       => __( 'Chave fornecida pela Click2pay', 'click2pay-pagamentos' ),
 				'default'           => '',
 				'custom_attributes' => array(
 					'required' => 'required',
 				),
 			),
 			'prefix' => array(
-				'title'             => __( 'Prefixo do pedido', 'click2pay-for-woocommerce' ),
+				'title'             => __( 'Prefixo do pedido', 'click2pay-pagamentos' ),
 				'type'              => 'text',
-				'description'       => __( 'Adicione um prefixo único ao ID do pedido enviado à Click2Pay.', 'click2pay-for-woocommerce' ),
+				'description'       => __( 'Adicione um prefixo único ao ID do pedido enviado à Click2Pay.', 'click2pay-pagamentos' ),
 				'default'           => 'wc-',
 				'custom_attributes' => array(
 					'required' => 'required',
 				),
 			),
 			'birthdate_required' => array(
-				'title'       => __( 'Data de nascimento', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Data de nascimento', 'click2pay-pagamentos' ),
 				'type'        => 'checkbox',
-				'label'       => __( 'Manter sempre ativo o campo de nascimento', 'click2pay-for-woocommerce' ),
+				'label'       => __( 'Manter sempre ativo o campo de nascimento', 'click2pay-pagamentos' ),
 				'default'     => 'yes',
-				'description' => __( 'A data de nascimento é obrigatória no antifraude. Se esta opção não estiver ativa, suas vendas podem ser rejeitadas. Essa opção força a ativação deste campo no plugin Brazilian Market.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'A data de nascimento é obrigatória no antifraude. Se esta opção não estiver ativa, suas vendas podem ser rejeitadas. Essa opção força a ativação deste campo no plugin Brazilian Market.', 'click2pay-pagamentos' ),
 			),
 			'testing' => array(
-				'title'       => __( 'Teste do Gateway', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Teste do Gateway', 'click2pay-pagamentos' ),
 				'type'        => 'title',
 				'description' => '',
 			),
 			'debug' => array(
-				'title'       => __( 'Log de depuração', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Log de depuração', 'click2pay-pagamentos' ),
 				'type'        => 'checkbox',
-				'label'       => __( 'Habilitar logs', 'click2pay-for-woocommerce' ),
+				'label'       => __( 'Habilitar logs', 'click2pay-pagamentos' ),
 				'default'     => 'no',
-				'description' => sprintf( __( 'Registra eventos deste método de pagamento, como requisições na API. Você pode verificar o log em %s', 'click2pay-for-woocommerce' ), '<a target="_blank" href="' . esc_url( admin_url( 'admin.php?page=wc-status&tab=logs&log_file=' . esc_attr( $this->id ) . '-' . sanitize_file_name( wp_hash( $this->id ) ) . '.log' ) ) . '">' . __( 'Status do Sistema &gt; Logs', 'click2pay-for-woocommerce' ) . '</a>' ),
+				'description' => sprintf( __( 'Registra eventos deste método de pagamento, como requisições na API. Você pode verificar o log em %s', 'click2pay-pagamentos' ), '<a target="_blank" href="' . esc_url( admin_url( 'admin.php?page=wc-status&tab=logs&log_file=' . esc_attr( $this->id ) . '-' . sanitize_file_name( wp_hash( $this->id ) ) . '.log' ) ) . '">' . __( 'Status do Sistema &gt; Logs', 'click2pay-pagamentos' ) . '</a>' ),
 			),
 			'sandbox' => array(
-				'title'       => __( 'Sandbox', 'click2pay-for-woocommerce' ),
+				'title'       => __( 'Sandbox', 'click2pay-pagamentos' ),
 				'type'        => 'checkbox',
-				'label'       => __( 'Usar plugin em modo de testes', 'click2pay-for-woocommerce' ),
+				'label'       => __( 'Usar plugin em modo de testes', 'click2pay-pagamentos' ),
 				'default'     => 'no',
-				'description' => __( 'Neste caso, as transações não serão realmente processadas. Utilize dados de teste.', 'click2pay-for-woocommerce' ),
+				'description' => __( 'Neste caso, as transações não serão realmente processadas. Utilize dados de teste.', 'click2pay-pagamentos' ),
 			),
 		);
 	}
 
-	/**
-	 * Payment fields.
-	 */
-	// public function payment_fields() {
-	// 	if ( $description = $this->get_description() ) {
-	// 		echo wp_kses_post( wpautop( wptexturize( $description ) ) );
-	// 	}
-	// }
+
+
+  public function should_save_credit_card() {
+    return isset( $_POST['wc-' . $this->id . '-new-payment-method'] ) && $_POST['wc-' . $this->id . '-new-payment-method'];
+  }
+
+
 
 	/**
 	 * Process the payment.
@@ -278,13 +278,13 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 	 */
 	public function process_payment( $order_id ) {
     try {
-      $save_card = isset( $_POST['wc-' . $this->id . '-new-payment-method'] ) && $_POST['wc-' . $this->id . '-new-payment-method'];
+      $save_card = $this->should_save_credit_card();
 
-      $card_hash  = isset( $_POST[ $this->id . '_hash'] ) ? wc_clean( $_POST[ $this->id . '_hash'] ) : '';
-      $card_brand = isset( $_POST[ $this->id . '_brand'] ) ? wc_clean( $_POST[ $this->id . '_brand'] ) : '';
-      $installments = isset( $_POST[ $this->id . '_installments'] ) ? wc_clean( $_POST[ $this->id . '_installments'] ) : '1';
+      $card_hash  = isset( $_POST[ $this->id . '_hash'] ) ? wc_clean( wp_unslash( $_POST[ $this->id . '_hash'] ) ) : '';
+      $card_brand = isset( $_POST[ $this->id . '_brand'] ) ? wc_clean( wp_unslash( $_POST[ $this->id . '_brand'] ) ) : '';
+      $installments = isset( $_POST[ $this->id . '_installments'] ) ? wc_clean( wp_unslash( $_POST[ $this->id . '_installments'] ) ) : '1';
 
-      $card_token = isset( $_POST[ 'wc-' . $this->id . '-payment-token'] ) ? wc_clean( $_POST[ 'wc-' . $this->id . '-payment-token'] ) : '';
+      $card_token = isset( $_POST[ 'wc-' . $this->id . '-payment-token'] ) ? wc_clean( wp_unslash( $_POST[ 'wc-' . $this->id . '-payment-token'] ) ) : '';
 
       $order = wc_get_order( $order_id );
       $this->remove_credit_card_fee( $order );
@@ -298,35 +298,37 @@ class Credit_Card extends WC_Payment_Gateway_CC {
           $token = new WC_Payment_Token_CC_Click2pay( $card_token );
 
           if ( ! $token->get_token() ) {
-            throw new Exception( __( 'Token não disponível.', 'click2pay-for-woocommerce' ) );
+            throw new Exception( __( 'Token não disponível.', 'click2pay-pagamentos' ) );
           }
 
           $card_token = $token->get_token();
 
-        } catch (Exception $e) {
-          $order->add_order_note( sprintf( __( 'Não foi possível processar o pagamento com cartão salvo: %s', 'click2pay-for-woocommerce' ), $e->getMessage() ) );
+          $order->add_payment_token( $token );
 
-          throw new Exception( __( 'Não foi possível processar o pagamento com cartão salvo. Por favor, adicione um novo cartão.', 'click2pay-for-woocommerce' ) );
+        } catch (Exception $e) {
+          $order->add_order_note( sprintf( __( 'Não foi possível processar o pagamento com cartão salvo: %s', 'click2pay-pagamentos' ), $e->getMessage() ) );
+
+          throw new Exception( __( 'Não foi possível processar o pagamento com cartão salvo. Por favor, adicione um novo cartão.', 'click2pay-pagamentos' ) );
         }
       }
 
       if ( ! isset( $card_brand ) ) {
-        throw new Exception( __( 'Não foi possível verificar o tipo do seu cartão. Por favor, tente novamente.', 'click2pay-for-woocommerce' ) );
+        throw new Exception( __( 'Não foi possível verificar o tipo do seu cartão. Por favor, tente novamente.', 'click2pay-pagamentos' ) );
       }
 
       if ( ! $card_hash && ! $card_token ) {
-        throw new Exception( __( 'Não foi possível processar seu cartão. Por favor, tente novamente.', 'click2pay-for-woocommerce' ) );
+        throw new Exception( __( 'Não foi possível processar seu cartão. Por favor, tente novamente.', 'click2pay-pagamentos' ) );
       }
 
       $available_installments = $this->get_available_installments();
 
-      if ( 1 !== intval( $installments ) && ! isset( $available_installments[ $installments ] ) ) {
-        throw new Exception( __( 'O número de parcelas é inválido. Por favor, selecione outra opção', 'click2pay-for-woocommerce' ) );
+      if ( intval( $installments ) > 1 && ! isset( $available_installments[ $installments ] ) ) {
+        throw new Exception( __( 'O número de parcelas é inválido. Por favor, selecione outra opção', 'click2pay-pagamentos' ) );
       }
 
-      $installment_data = $available_installments[ $installments ];
+      $installment_data = isset( $available_installments[ $installments ] ) ? $available_installments[ $installments ] : [];
 
-      if ( $installment_data['has_fee'] ) {
+      if ( $installment_data && $installment_data['has_fee'] ) {
         $fee_amount = $installment_data['total'] - $order->get_total();
         $fee = new WC_Order_Item_Fee();
         $fee->set_amount( $fee_amount );
@@ -343,7 +345,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
       $data = $response_data->data;
 
       if ( isset( $response_data->error, $response_data->errorDescription ) ) {
-        throw new Exception( sprintf( __( 'Ocorreu um erro ao processar sua solicitação: %s', 'click2pay-for-woocommerce' ), $response_data->errorDescription ) );
+        throw new Exception( sprintf( __( 'Ocorreu um erro ao processar sua solicitação: %s', 'click2pay-pagamentos' ), $response_data->errorDescription ) );
       }
 
       $order->set_transaction_id( $data->tid );
@@ -359,18 +361,17 @@ class Credit_Card extends WC_Payment_Gateway_CC {
       }
 
       if ( 'paid' === $data->status ) {
-        $order->add_order_note( __( 'Pagamento já confirmado pela Click2pay.', 'click2pay-for-woocommerce' ) );
+        $order->add_order_note( __( 'Pagamento já confirmado pela Click2Pay.', 'click2pay-pagamentos' ) );
 
         $order->payment_complete();
       } else {
-        $order->set_status( 'on-hold', __( 'Pagamento iniciado. Aguardando confirmação.', 'click2pay-for-woocommerce' ) );
+        $order->set_status( 'on-hold', __( 'Pagamento iniciado. Aguardando confirmação.', 'click2pay-pagamentos' ) );
       }
 
       $order->save();
 
     } catch (Exception $e) {
-      // $order->set_status( 'failed', sprintf( __( 'Ocorreu um erro ao processar o pedido: %s', 'click2pay-for-woocommerce' ), $e->getMessage() ) );
-      // $order->save();
+      $order->update_status( 'failed', sprintf( __( 'Ocorreu um erro ao processar o pedido: %s', 'click2pay-pagamentos' ), $e->getMessage() ) );
 
       throw new Exception( $e->getMessage(), $e->getCode() );
     }
@@ -400,10 +401,10 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 		$response_data = $this->api->refund_transaction( $order, $amount );
 
     if ( isset( $response_data->error, $response_data->errorDescription ) ) {
-      throw new Exception( sprintf( __( 'Ocorreu um erro ao processar o reembolso: %s', 'click2pay-for-woocommerce' ), $response_data->errorDescription ) );
+      throw new Exception( sprintf( __( 'Ocorreu um erro ao processar o reembolso: %s', 'click2pay-pagamentos' ), $response_data->errorDescription ) );
     }
 
-    $order->add_order_note( sprintf( __( 'Processado reembolso automático de %s. %s', 'click2pay-for-woocommerce' ), wc_price( $amount ), $reason ) );
+    $order->add_order_note( sprintf( __( 'Processado reembolso automático de %s. %s', 'click2pay-pagamentos' ), wc_price( $amount ), $reason ) );
 
     $order->update_meta_data( '_click2pay_refund_data', $response_data );
     $order->save();
@@ -441,16 +442,16 @@ class Credit_Card extends WC_Payment_Gateway_CC {
           'card'         => isset( $data->card->brand ) ? $data->card : null,
         ],
         '',
-        Click2pay_For_WooCommerce::get_templates_path()
+        Click2pay_Payments::get_templates_path()
       );
     }
 	}
 
 	/**
-	 * IPN handler.
+	 * Notification handler.
 	 */
-	public function ipn_handler() {
-		$this->api->ipn_handler();
+	public function notification_handler() {
+		$this->api->notification_handler();
 	}
 
 
@@ -459,15 +460,15 @@ class Credit_Card extends WC_Payment_Gateway_CC {
       $this->id . '-tokenization',
       $this->api->get_js_url(),
       [ 'jquery' ],
-      Click2pay_For_WooCommerce::VERSION,
+      Click2pay_Payments::VERSION,
       true
     );
 
     wp_register_script(
       $this->id,
-      Click2pay_For_WooCommerce::plugin_url() . '/assets/js/gateways/credit-card.js',
+      Click2pay_Payments::plugin_url() . '/assets/js/gateways/credit-card.js',
       [ $this->id . '-tokenization' ],
-      Click2pay_For_WooCommerce::VERSION,
+      Click2pay_Payments::VERSION,
       true
     );
 
@@ -478,9 +479,9 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 				'method_id'  => $this->id,
 				'public_key' => $this->public_key,
         'errors'     => [
-          'expire_date' => __( 'A data de validade é inválida.', 'click2pay-for-woocommerce' ),
-          'card_number' => __( 'O número do cartão é inválido.', 'click2pay-for-woocommerce' ),
-          'generic' => __( 'Ocorreu um erro ao validar seu cartão. Tente novamente.', 'click2pay-for-woocommerce' ),
+          'expire_date' => __( 'A data de validade é inválida.', 'click2pay-pagamentos' ),
+          'card_number' => __( 'O número do cartão é inválido.', 'click2pay-pagamentos' ),
+          'generic' => __( 'Ocorreu um erro ao validar seu cartão. Tente novamente ou entre em contato para obter assistência.', 'click2pay-pagamentos' ),
         ],
 			]
 		);
@@ -490,8 +491,8 @@ class Credit_Card extends WC_Payment_Gateway_CC {
   public function add_brazilian_fields( $fields ) {
     $extra_fields = [
       'card-holder-field' => '<p class="form-row form-row-wide">
-        <label for="' . esc_attr( $this->id ) . '-card-holder">' . esc_html__( 'Nome completo', 'click2pay-for-woocommerce' ) . '&nbsp;<span class="required">*</span></label>
-        <input id="' . esc_attr( $this->id ) . '-card-holder" class="input-text wc-credit-card-form-card-holder" inputmode="text" autocomplete="cc-name" autocorrect="no" autocapitalize="no" spellcheck="no" type="text" placeholder="' . esc_html__( 'Como no cartão', 'click2pay-for-woocommerce' ) . '" ' . $this->field_name( 'card-holder' ) . ' />
+        <label for="' . esc_attr( $this->id ) . '-card-holder">' . esc_html__( 'Nome completo', 'click2pay-pagamentos' ) . '&nbsp;<span class="required">*</span></label>
+        <input id="' . esc_attr( $this->id ) . '-card-holder" class="input-text wc-credit-card-form-card-holder" inputmode="text" autocomplete="cc-name" autocorrect="no" autocapitalize="no" spellcheck="no" type="text" placeholder="' . esc_html__( 'Como no cartão', 'click2pay-pagamentos' ) . '" ' . $this->field_name( 'card-holder' ) . ' />
       </p>',
     ];
 
@@ -586,7 +587,11 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 
 
 
-  public function save_card_token( $credit_card ) {
+  public function save_card_token( $credit_card, $user_id = false ) {
+    if ( ! $user_id ) {
+      $user_id = get_current_user_id();
+    }
+
     $token = new WC_Payment_Token_CC_Click2pay();
     $token->set_token( $credit_card->card_token );
     $token->set_gateway_id( $this->id );
@@ -594,7 +599,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
     $token->set_expiry_month( 12 );
     $token->set_expiry_year( 2040 );
     $token->set_card_type( strtolower( $credit_card->brand ) );
-    $token->set_user_id( get_current_user_id() );
+    $token->set_user_id( $user_id );
     $token->save();
 
     return $token;
@@ -614,9 +619,11 @@ class Credit_Card extends WC_Payment_Gateway_CC {
 
     $installments = $this->get_available_installments();
 
-    if ( $installments ) {
+    if ( $installments && count( $installments ) === 1 ) {
+      echo '<input type="hidden" name="' . esc_attr( $this->id . '_installments' ) . '" value="1" />';
+    } elseif ( $installments ) {
       $installments_field = '<p class="form-row form-row-wide">
-      <label for="' . esc_attr( $this->id ) . '-card-installments">' . esc_html__( 'Parcelamento', 'click2pay-for-woocommerce' ) . '&nbsp;<span class="required">*</span></label>
+      <label for="' . esc_attr( $this->id ) . '-card-installments">' . esc_html__( 'Parcelamento', 'click2pay-pagamentos' ) . '&nbsp;<span class="required">*</span></label>
       <select id="' . esc_attr( $this->id ) . '-card-installments" class="input-select wc-credit-card-form-card-installments" name="' . esc_attr( $this->id . '_installments' ) . '">';
 
       foreach ( $installments as $installment ) {
@@ -646,7 +653,7 @@ class Credit_Card extends WC_Payment_Gateway_CC {
     }
 
     if ( $fee_row && isset( $total_rows['order_total'] ) ) {
-      $total_rows['order_total']['value'] .= ' <small>' . __( '(com juros)', 'click2pay-for-woocommerce' ) . '</small>';
+      $total_rows['order_total']['value'] .= ' <small>' . __( '(com juros)', 'click2pay-pagamentos' ) . '</small>';
     }
 
     return $total_rows;

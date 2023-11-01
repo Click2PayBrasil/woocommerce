@@ -1,6 +1,6 @@
 <?php
 
-namespace Click2pay_For_WooCommerce\API;
+namespace Click2pay_Payments\API;
 
 use Exception;
 
@@ -10,7 +10,7 @@ class Bank_Slip_API extends API {
   public function create_transaction( $order ) {
     $birthdate = $this->gateway->get_birthdate( $order );
 
-    if ( $order->get_shipping_address_1() ) {
+    if ( $order->get_shipping_address_1() && $order->get_meta( '_shipping_number' ) ) {
       $address = [
         'place' => $order->get_shipping_address_1(),
         'number' => $order->get_meta( '_shipping_number' ),
@@ -33,7 +33,7 @@ class Bank_Slip_API extends API {
     }
 
     $args = [
-      'id' => $this->gateway->prefix . $order->get_id(),
+      'id' => $this->gateway->prefix . $order->get_id() . uniqid('|'),
       'totalAmount' => $order->get_total(),
       'payerInfo' => [
         'name'        => $order->get_formatted_billing_full_name(),
@@ -49,7 +49,7 @@ class Bank_Slip_API extends API {
         $this->gateway->instructions_1,
         $this->gateway->instructions_2,
       ] ),
-      'description' => sprintf( __( 'Pagamento do pedido #%s', 'click2pay-for-woocommerce' ), $order->get_id() ),
+      'description' => sprintf( __( 'Pagamento do pedido #%s', 'click2pay-pagamentos' ), $order->get_id() ),
       'logo' => $this->gateway->logo,
     ];
 

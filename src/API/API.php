@@ -1,8 +1,8 @@
 <?php
 
-namespace Click2pay_For_WooCommerce\API;
+namespace Click2pay_Payments\API;
 
-use Click2pay_For_WooCommerce;
+use Click2pay_Payments;
 use Exception;
 
 defined( 'ABSPATH' ) || exit;
@@ -103,10 +103,10 @@ abstract class API {
 	 * @return object|WP_Error            Request response.
 	 */
 	protected function do_request( $endpoint, $data = [], $method = 'POST', $headers = [] ) {
-		$url = $this->get_api_url() . $endpoint;
+		$url = sanitize_url( $this->get_api_url() . $endpoint );
 
 		// Pagar.me user-agent and api version.
-		$useragent = 'click2pay-for-woocommerce/' . Click2pay_For_WooCommerce::VERSION;
+		$useragent = 'click2pay-for-woocommerce/' . Click2pay_Payments::VERSION;
 
 		if ( defined( 'WC_VERSION' ) ) {
 			$useragent .= ' woocommerce/' . WC_VERSION;
@@ -122,7 +122,7 @@ abstract class API {
 				'Accept'       => 'application/json',
 				'Content-Type' => 'application/json',
         'User-Agent'   => $useragent,
-        'Authorization' => 'Basic ' . base64_encode( $this->gateway->client_id . ':' . $this->gateway->client_secret ),
+        'Authorization' => 'Basic ' . base64_encode( sanitize_text_field( $this->gateway->client_id ) . ':' . sanitize_text_field( $this->gateway->client_secret ) ),
 			],
 		];
 
@@ -134,20 +134,20 @@ abstract class API {
 			$params['headers'] = wp_parse_args( $headers, $params['headers'] );
 		}
 
-    $this->gateway->log( $url . ' (' . $method . '):' . print_r( $params, true ) );
+    $this->gateway->log( $url . ' (' . $method . '):' . print_r( $params['body'], true ) );
 
 		$response = wp_safe_remote_post( $url, $params );
 
     if ( is_wp_error( $response ) ) {
       $this->gateway->log( 'WP_Error: ' . $response->get_error_message() );
 
-      throw new Exception( sprintf( __( 'Ocorreu um erro interno: %s', 'click2pay-for-woocommerce' ) ) );
+      throw new Exception( sprintf( __( 'Ocorreu um erro interno: %s', 'click2pay-pagamentos' ) ) );
     }
 
     if ( ! $response ) {
       $this->gateway->log( 'Erro no requisição: resposta em branco.' );
 
-      throw new Exception( __( 'Ocorreu um erro interno. Entre em contato para obter assistência.', 'click2pay-for-woocommerce' ) );
+      throw new Exception( __( 'Ocorreu um erro interno. Entre em contato para obter assistência.', 'click2pay-pagamentos' ) );
     }
 
     $response_code = wp_remote_retrieve_response_code( $response );
@@ -155,7 +155,7 @@ abstract class API {
     if ( 401 === $response_code ) {
       $this->gateway->log( 'Erro no requisição: credenciais inválidas' );
 
-      throw new Exception( __( 'Ocorreu um erro de autenticação. Entre em contato para obter assitência', 'click2pay-for-woocommerce' ) );
+      throw new Exception( __( 'Ocorreu um erro de autenticação. Entre em contato para obter assitência', 'click2pay-pagamentos' ) );
     }
 
     return $response;
@@ -165,9 +165,9 @@ abstract class API {
 
 
 	/**
-	 * IPN handler.
+	 * Notification handler.
 	 */
-	public function ipn_handler() {
+	public function notification_handler() {
 		@ob_clean();
 
     try {
@@ -180,13 +180,13 @@ abstract class API {
       if ( $this->gateway->transaction_type !== $data->transaction_type ) {
         $this->gateway->log( 'Tipo de transação inválida para este gateway:' . $this->gateway->transaction_type );
 
-        throw new Exception( __( 'Tipo de transação inválida', 'click2pay-for-woocommerce' ) );
+        throw new Exception( __( 'Tipo de transação inválida', 'click2pay-pagamentos' ) );
       }
 
       if ( ! in_array( $data->type, [ 'PAYMENT_RECEIVED', 'PAYMENT_REFUNDED' ] ) ) {
         $this->gateway->log( 'Tipo de evento inválido:' . $data->type );
 
-        throw new Exception( __( 'Tipo de evento inválido', 'click2pay-for-woocommerce' ) );
+        throw new Exception( __( 'Tipo de evento inválido', 'click2pay-pagamentos' ) );
       }
 
       $order_id = $this->get_order_id_by_transaction( $data->tid );
@@ -194,7 +194,7 @@ abstract class API {
       if ( ! $order_id ) {
         $this->gateway->log( 'Transação não encontrada:' . $data->tid );
 
-        throw new Exception( __( 'Transação não encontrada', 'click2pay-for-woocommerce' ) );
+        throw new Exception( __( 'Transação não encontrada', 'click2pay-pagamentos' ) );
       }
 
       $order = wc_get_order( $order_id );
@@ -202,18 +202,18 @@ abstract class API {
       if ( ! $order ) {
         $this->gateway->log( 'Pedido inválido:' . $order_id );
 
-        throw new Exception( __( 'Pedido inválido', 'click2pay-for-woocommerce' ) );
+        throw new Exception( __( 'Pedido inválido', 'click2pay-pagamentos' ) );
       }
 
       if ( 'PAYMENT_RECEIVED' === $data->type && 'paid' === $data->status ) {
         $this->gateway->log( 'Pedido Pago! #' . $order_id );
 
         if ( ! $order->is_paid() ) {
-          $order->add_order_note( __( 'Notificação de pagamento recebida', 'click2pay-for-woocommerce' ) );
+          $order->add_order_note( __( 'Notificação de pagamento recebida', 'click2pay-pagamentos' ) );
           $order->update_meta_data( '_click2pay_payment_webhook_data', $data );
           $order->payment_complete();
         } else {
-          $order->add_order_note( __( 'Nova notificação de pagamento recebida', 'click2pay-for-woocommerce' ) );
+          $order->add_order_note( __( 'Nova notificação de pagamento recebida', 'click2pay-pagamentos' ) );
         }
 
       } else if ( 'PAYMENT_REFUNDED' === $data->type ) {
@@ -224,15 +224,15 @@ abstract class API {
       }
 
       wp_die(
-        __( 'Webhook received', 'click2pay-for-woocommerce' ),
-        __( 'Webhook response', 'click2pay-for-woocommerce' ),
+        __( 'Webhook received', 'click2pay-pagamentos' ),
+        __( 'Webhook response', 'click2pay-pagamentos' ),
         array( 'response' => 200, 'code' => 'success' )
       );
 
     } catch ( Exception $e ) {
       wp_die(
         $e->getMessage(),
-        __( 'Webhook response', 'click2pay-for-woocommerce' ),
+        __( 'Webhook response', 'click2pay-pagamentos' ),
         array( 'response' => $e->getCode() ? $e->getCode() : 400, 'code' => 'error' )
       );
     }
@@ -242,7 +242,7 @@ abstract class API {
   private function validate_request() {
 		// Validate user secret.
 		if ( ! hash_equals( base64_encode( $this->gateway->client_id ), $this->get_authorization_header() ) ) { // @codingStandardsIgnoreLine
-      throw new Exception( __( 'Não autorizado.', 'click2pay-for-woocommerce' ), 401 );
+      throw new Exception( __( 'Não autorizado.', 'click2pay-pagamentos' ), 401 );
     }
 
     return true;
@@ -283,16 +283,15 @@ abstract class API {
 
 
   public function get_order_id_by_transaction( $transaction_id ) {
-    global $wpdb;
+    $orders = wc_get_orders([
+      'transaction_id' => sanitize_text_field( $transaction_id ),
+      'return' => 'ids',
+    ]);
 
-    $query = apply_filters(
-      'click2pay_for_woocommerce_order_id_by_transaction_query',
-      $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_transaction_id' AND meta_value = %s", $transaction_id ),
-      $transaction_id
-    );
+    if ( ! $orders ) {
+      return 0;
+    }
 
-    $value = (int) $wpdb->get_var( $query );
-
-    return $value;
+    return $orders[0];
   }
 }

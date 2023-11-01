@@ -5,9 +5,9 @@ Receba pagamentos via Pix, Cartão de crédito e boleto
 <img src="https://click2pay.com.br/site/views/_assets/images/logo-white.svg" width="100" alt="Click2Pay Logo" />
 
 - **Tags:** Pagamentos, Pix, Cartão de Crédito, Boleto, Click2pay
-- **Version:** 1.0.5
+- **Version:** 1.1.5
 - **WC requires at least:** 4.0.0
-- **WC tested up to:** 6.9.2
+- **WC tested up to:** 6.3.1
 - **License:** GNU General Public License v3.0
 
 A solução completa para você receber seus pagamentos online.

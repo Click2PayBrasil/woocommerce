@@ -1,6 +1,6 @@
 <?php
 
-namespace Click2pay_For_WooCommerce\Credit_Card;
+namespace Click2pay_Payments\Credit_Card;
 
 use WC_Payment_Token_CC;
 

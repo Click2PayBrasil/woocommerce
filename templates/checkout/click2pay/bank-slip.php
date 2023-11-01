@@ -145,25 +145,25 @@ $base_text = wc_light_or_dark( $base, '#202020', '#ffffff' );
 </style>
 
 <section id="<?php echo esc_attr( $id ); ?>-thankyou">
-	<h3 class="click2pay-bankslip-title"><?php echo __( 'Aguardando seu pagamento via boleto', 'click2pay-for-woocommerce' ); ?></h3>
+	<h3 class="click2pay-bankslip-title"><?php echo __( 'Aguardando seu pagamento via boleto', 'click2pay-pagamentos' ); ?></h3>
 
   <?php if ( $instructions ) { ?>
-		<div class="instruction"><?php echo $instructions; ?></div>
+		<div class="instruction"><?php echo wpautop( wptexturize( $instructions ) ); ?></div>
 	<?php } ?>
 
   <?php if ( ! $is_email ) { ?>
     <div class="click2pay-bankslip-copy-paste">
-      <textarea style="width: 100%;" id="click2pay-bankslip-payload" readonly data-clipboard-target="#click2pay-bankslip-payload" class="bankslip-copy click2pay-bankslip-url"><?php echo $bank_slip_barcode; ?></textarea>
+      <textarea style="width: 100%;" id="click2pay-bankslip-payload" readonly data-clipboard-target="#click2pay-bankslip-payload" class="bankslip-copy click2pay-bankslip-url"><?php echo esc_html( $bank_slip_barcode ); ?></textarea>
     </div>
   <?php } ?>
 
   <div class="click2pay-bankslip-open-browser-container">
     <?php if ( ! $is_email ) {
-      echo '<span class="bankslip-copy bankslip-copy-button click2pay-bankslip-open-browser" data-clipboard-target="#click2pay-bankslip-payload">' . __( 'Copiar linha digitável', 'click2pay-for-woocommerce' ) . '</span>';
+      echo '<span class="bankslip-copy bankslip-copy-button click2pay-bankslip-open-browser" data-clipboard-target="#click2pay-bankslip-payload">' . __( 'Copiar linha digitável', 'click2pay-pagamentos' ) . '</span>';
     } ?>
 
-    <a target="_blank" href="<?php echo $bank_slip_url; ?>" class="click2pay-bankslip-open-browser">
-      <?php echo __( 'Imprimir boleto', 'click2pay-for-woocommerce' ); ?>
+    <a target="_blank" href="<?php echo esc_url( $bank_slip_url ); ?>" class="click2pay-bankslip-open-browser">
+      <?php echo __( 'Imprimir boleto', 'click2pay-pagamentos' ); ?>
     </a>
   </div>
 </section>

@@ -1,6 +1,6 @@
 <?php
 
-namespace Click2pay_For_WooCommerce\Traits;
+namespace Click2pay_Payments\Traits;
 
 use WC_Logger;
 
@@ -39,12 +39,12 @@ trait Logger {
       return;
     }
 
-    $message = is_string( $message ) ? $message : print_r( $message, true );
+    $message = is_string( $message ) ? $message : wc_print_r( $message, true );
 
 		if ( ! isset( self::$log ) ) {
 			self::$log = wc_get_logger();
 		}
 
-		self::$log->log( $level, $message, array( 'source' => $this->source ) );
+		self::$log->log( $level, sanitize_text_field( $message ), array( 'source' => $this->source ) );
   }
 }

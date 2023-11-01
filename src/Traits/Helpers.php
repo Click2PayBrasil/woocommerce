@@ -1,6 +1,6 @@
 <?php
 
-namespace Click2pay_For_WooCommerce\Traits;
+namespace Click2pay_Payments\Traits;
 
 use WC_Logger;
 
