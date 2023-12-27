@@ -182,7 +182,20 @@ class Credit_Card_Subscriptions extends Credit_Card
             $card_token = $order->get_meta('_click2pay_card_id');
 
             if (! $card_token) {
-                throw new Exception(__('Token não encontrado no pedido.', 'click2pay-pagamentos'));
+                $subscription = wc_get_order( $order->get_meta('_subscription_renewal') );
+
+                if ( $subscription->get_parent() ) {
+                    $tokens = \WC_Payment_Tokens::get_order_tokens($subscription->get_parent()->get_id());
+
+                    foreach ( $tokens as $token ) {
+                        $card_token = $token->get_token();
+                        break;
+                    }
+                }
+
+                if(! $card_token ) {
+                    throw new Exception(__('Token não encontrado no pedido.', 'click2pay-pagamentos'));
+                }
             }
 
             $response_data = $this->api->create_transaction($order, 1, false, $card_token, false);
@@ -235,7 +248,7 @@ class Credit_Card_Subscriptions extends Credit_Card
         $payment_meta[$this->id] = [
             'post_meta' => [
                 '_click2pay_card_id' => [
-                    'value' => $subscription->get_meta('_click2pay_card_id'),
+                    'value' => get_post_meta($subscription->get_id(), '_click2pay_card_id', true ),
                     'label' => __('ID do cartão Click2Pay', 'click2pay-pagamentos'),
                 ],
             ],
@@ -350,7 +363,7 @@ class Credit_Card_Subscriptions extends Credit_Card
         $tokens = WC_Payment_Tokens::get_order_tokens($order->get_id());
 
         foreach ($tokens as $token) {
-            $subscription->add_meta_data('_click2pay_card_id', $token->get_token(), true);
+            update_post_meta( $subscription->get_id(), '_click2pay_card_id', $token->get_token());
             break;
         }
     }
